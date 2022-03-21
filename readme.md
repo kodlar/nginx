@@ -407,3 +407,120 @@ GD library bulunamadığı için hata alacaktır.
  
 #dinamik imaj modülü yüklemek için ngix.conf içine bu kodu ekliyoruz
 load_module modules/ngx_http_image_filter_module.so bu satır hata verirse load_module /etc/nginx/modules/ngx_http_image_filter_module.so; şeklinde deneyin
+
+gzip ile statik dosya tiplerini sıkıştırıp performansı arttırabiliriz
+gzip on;
+#sıkıştırma oranı 
+gzip_comp_level 3;
+gzip_types text/css;
+gzip_types text/javascript;
+
+curl -I http://localhost/style.css
+curl -I -H "Accept-Encoding:gzip, deflate" http://localhost/style.css
+
+curl http://localhost/style.css > style.css
+curl -H "Accept-Encoding:gzip, deflate" http://localhost/style.css > style.min.css
+download edip karşılaştırırsak aradaki boyut farkını görebiliriz
+
+Cacheleme için aşağıdaki değerlere bakacak olursak ilk satırda cache path level ile cacheleme düzeyini keys_zone ile cache grubu 100mb olacak şekilde eğer cache 60 dakika kimse gelmezse ilgili cache sil diyoruz
+cache key parametresi ile cache keyimizi oluşturuyoruz, bu cachekey md5 ile hashlaniyor
+ # Configure microcache (fastcgi)
+  fastcgi_cache_path /tmp/nginx_cache levels=1:2 keys_zone=ZONE_1:100m inactive=60m;
+  fastcgi_cache_key "$scheme$request_method$host$request_uri";
+  #bu headerda HIT görürsek cachelenmiş MISS görürsek cachesiz geliyor demektir
+  add_header X-Cache $upstream_cache_status;
+
+  ilgili location altında
+  location ~\.php$ {
+            
+
+                # Enable cache
+                # Yukarıdaki zone alanı
+                fastcgi_cache ZONE_1;
+                # Hangi response tipi ne kadar süre cachelenecek yukarıdaki inactive süresi # ile aynı olmalı
+                fastcgi_cache_valid 200 60m;
+                fastcgi_cache_bypass $no_cache;
+                fastcgi_no_cache $no_cache;
+        }
+
+Şimdi test edebilmek için apache benchmark tool kullanacağız Yüklemek için aşağıdaki kodu çalıştırıyoruz
+
+apt-get install apache2-utils ile yüklüyoruz
+
+ab diyip komutu çalıştırırsak opsiyonları listeleriz
+
+ab -n 100 -c 10 http://127.0.1.1/
+
+burada 100 request 10 kullanıcı tarafından olsun diyoruz
+
+
+HTTP2 modülü yükleme
+
+nginx -V
+diyerek configürasyon pathimizi aldık
+
+--sbin-path=/usr/bin/nginx --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --with-pcre --pid-path=/var/run/nginx.pid --with-http_ssl_module --with-http_image_filter_module=dynamic --modules-path=/etc/nginx/modules
+
+diğer modülleri görmek için
+
+./configure --help | grep http_v2 çalıştırıyoruz
+  --with-http_v2_module              enable ngx_http_v2_module
+
+
+./configure --sbin-path=/usr/bin/nginx --conf-path=/etc/nginx/nginx.conf --error-log-path=/var/log/nginx/error.log --http-log-path=/var/log/nginx/access.log --with-pcre --pid-path=/var/run/nginx.pid --with-http_ssl_module --with-http_image_filter_module=dynamic --modules-path=/etc/nginx/modules --with-http_v2_module
+
+konfigürasyon check bitince tekrar 
+
+make  --yani compile etmesi için çağırıyoruz
+
+make install -- compile edilmiş konfigürasyonu yüklemek için çalıştırıyoruz
+
+nginx servisi restart edelim
+
+ sonra ilgili site için development amaçlı ssl sertifikası oluşturuyoruz
+nginx konfig dosyasının bulunduğu dizinde ssl dosyası oluşturuyoruz
+
+openssl req -x509 -days 365 -nodes -newkey rsa:2048 -keyout /etc/nginx/ssl/self.key -out /etc/nginx/ssl/self.crt
+
+key oluşturma sorularına öylesine cevap veriyoruz
+
+Country Name (2 letter code) [AU]:AU
+State or Province Name (full name) [Some-State]:WCAPE
+Locality Name (eg, city) []:İstanbul
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:bizimcompany
+Organizational Unit Name (eg, section) []:dev
+Common Name (e.g. server FQDN or YOUR name) []:ogan keskiner
+Email Address []:ogankeskiner@gmail.com
+
+-rw-r--r-- 1 root root 1.5K Mar 21 22:14 self.crt (SERTİFİKA)
+-rw------- 1 root root 1.7K Mar 21 22:13 self.key (PRIVATE KEY)
+
+konfigürasyona ilgili directiveleri ekliyoruz
+
+listen 80;
+listen 443 ssl http2;
+
+ssl_certificate /etc/nginx/ssl/self.crt;
+ssl_certificate_key /etc/nginx/ssl/self.key;
+
+ve aşağıdaki komutla çağırıyoruz 
+curl -Ik  https://127.0.1.1
+curl -I https://127.0.1.1 --insecure
+
+
+Server Push
+
+apt-get install nghttp2-client
+n parametresi to discard responses we are only testing not saving to disk
+y ignore self-signed certificate
+s print the response statistics
+nghttp -nys https://127.0.1.1/index.html
+
+a all the assets in the file
+
+nghttp -nysa https://127.0.1.1/index.html
+
+location = /index.html {
+      http2_push /style.css;
+      http2_push /thumb.png;
+    }
