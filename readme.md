@@ -524,3 +524,22 @@ location = /index.html {
       http2_push /style.css;
       http2_push /thumb.png;
     }
+
+SSL'i daha güvenli hale getirme için yapılan işlemler
+
+dhparam oluşturmak için aşağıdaki kodu çalıştırıyoruz
+openssl dhparam -out /etc/nginx/ssl/dhparam-2048.pem 2048
+diğer açıklamalar config dosyasında
+
+RateLimit
+Sitemize veya apimize gelen istekleri saldırılara karşı korumak için alınan bir tedbirdir
+Test etmek için siege kullanacağız
+apt-get install siege ile programı yüklüyoruz
+-v verbose login
+-r 2 run 2 tests
+-c 5 concurrent 5 connection 
+siege -v -r 2 -c 5 https://127.0.1.1/thumb.png
+
+config dosyasına rate limit koyuyoruz
+limit_req_zone $request_uri zone=MYZONE:10m rate=1r/s;
+direktiften sonra belirli bir url adresine Myzone alanında saniyede 1 istek alsın diye sınırlama getiriyoruz
