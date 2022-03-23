@@ -543,3 +543,53 @@ siege -v -r 2 -c 5 https://127.0.1.1/thumb.png
 config dosyasına rate limit koyuyoruz
 limit_req_zone $request_uri zone=MYZONE:10m rate=1r/s;
 direktiften sonra belirli bir url adresine Myzone alanında saniyede 1 istek alsın diye sınırlama getiriyoruz
+
+
+reverse proxy
+
+ location / {
+          #limit_req zone=MYZONE burst=5 nodelay;
+          proxy_pass https://dotnet;
+          proxy_set_header Host $host;
+          # proxy_pass http://localhost:5000;
+      	  #proxy_http_version 1.1;
+     	  #proxy_set_header Upgrade $http_upgrade;
+      	  #proxy_set_header Connection keep-alive;
+      	  #proxy_set_header Host $host;
+      	  #proxy_cache_bypass $http_upgrade;
+
+         # proxy_set_header    Host $http_host;
+          proxy_set_header    X-Real-IP               $remote_addr;
+          proxy_set_header    X-Forwarded-For         $proxy_add_x_forwarded_for;
+         #try_files $uri $uri/ =404;
+        }
+
+server contextin dışına
+
+upstream dotnet {
+    zone dotnet 64k;
+    server 127.0.0.1:5001;
+}
+ 
+ssl key ve pem dosyaları güncellendi
+
+wsl kullanıcı adı: okeskiner pass 1
+wsl diger kullanıcı adı adminok pass 1qaz
+
+
+sftp sunucuda aktif etmek için
+wsl ile bağlantı kurmak için
+https://faun.pub/how-to-setup-ssh-connection-on-ubuntu-windows-subsystem-for-linux-2b36afb943dc
+
+reverse proxy için buradakiler uygulandı
+https://stackoverflow.com/questions/65815372/edit-nginx-reverse-proxy-asp-net-core-5-0-localhost5000-closes-connection-but
+
+
+tmux cheatsheet
+https://tmuxcheatsheet.com/
+
+
+
+dotnet api çağırmak için
+https://localhost/weatherforecast
+https://127.0.0.1/weatherforecast
