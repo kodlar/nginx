@@ -593,3 +593,5 @@ https://tmuxcheatsheet.com/
 dotnet api çağırmak için
 https://localhost/weatherforecast
 https://127.0.0.1/weatherforecast
+diğer nginx sunucusu
+http://127.0.0.1:8888/
